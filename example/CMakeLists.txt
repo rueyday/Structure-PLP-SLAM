@@ -127,9 +127,17 @@ foreach(EXECUTABLE_TARGET IN LISTS EXECUTABLE_TARGETS)
         opencv_imgcodecs
         opencv_videoio)
 
-    # include popl and spdlog headers
-    target_include_directories(${EXECUTABLE_TARGET}
-        PRIVATE
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/popl/include>
-        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/spdlog/include>)
+    # include popl headers; use system spdlog if available, bundled otherwise
+    if(spdlog_FOUND)
+        target_link_libraries(${EXECUTABLE_TARGET} PRIVATE spdlog::spdlog)
+        target_compile_definitions(${EXECUTABLE_TARGET} PRIVATE SPDLOG_FMT_EXTERNAL)
+        target_include_directories(${EXECUTABLE_TARGET}
+            PRIVATE
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/popl/include>)
+    else()
+        target_include_directories(${EXECUTABLE_TARGET}
+            PRIVATE
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/popl/include>
+            $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/spdlog/include>)
+    endif()
 endforeach()

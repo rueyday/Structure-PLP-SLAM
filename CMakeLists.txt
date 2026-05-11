@@ -12,6 +12,10 @@ if(POLICY CMP0074)
     cmake_policy(SET CMP0074 OLD)
 endif()
 
+if(POLICY CMP0079)
+    cmake_policy(SET CMP0079 NEW)
+endif()
+
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 # ----- Set build type -----
@@ -70,6 +74,14 @@ else()
 endif()
 
 # ----- Find dependencies -----
+
+# spdlog: prefer system 1.12+ over bundled 1.3.1 (incompatible with system fmt 9)
+find_package(spdlog QUIET)
+if(spdlog_FOUND)
+    message(STATUS "Using system spdlog ${spdlog_VERSION}")
+else()
+    message(STATUS "Using bundled spdlog (system spdlog not found)")
+endif()
 
 # Threads
 find_package(Threads REQUIRED)
@@ -133,6 +145,7 @@ set(INCLUDES_DESTINATION ${CMAKE_INSTALL_PREFIX}/include)
 # ----- Build selection -----
 set(USE_PANGOLIN_VIEWER ON CACHE BOOL "Enable Pangolin Viewer")
 set(USE_SOCKET_PUBLISHER OFF CACHE BOOL "Enable Socket Publisher")
+set(USE_ZMQ_LINE_PUBLISHER OFF CACHE BOOL "Enable ZMQ real-time line map publisher")
 
 add_subdirectory(src)
 

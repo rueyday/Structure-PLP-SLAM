@@ -100,7 +100,7 @@ namespace PLPSLAM
             //  map_x: The mapping function in the x direction. It is equivalent to the first component of h(i,j)
             //  map_y: Same as above, but in y direction. Note that map_y and map_x are both of the same size as src
             //  INTER_LINEAR: The type of interpolation to use for non-integer pixels. This is by default.
-            cv::remap(img, img_temp, _undist_map1, _undist_map2, CV_INTER_LINEAR);
+            cv::remap(img, img_temp, _undist_map1, _undist_map2, cv::INTER_LINEAR);
 
             if (EQUALIZE) // Histogram equalization
             {

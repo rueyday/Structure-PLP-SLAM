@@ -1,7 +1,6 @@
 # ----- Find dependencies -----
 
-# spdlog
-set(spdlog_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd/spdlog/include)
+# spdlog_FOUND is set in root CMakeLists.txt via find_package(spdlog)
 
 # json
 set(json_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/3rd/json/include)
@@ -129,13 +128,16 @@ message(STATUS "BoW framework: ${BOW_FRAMEWORK} (found in ${BoW_INCLUDE_DIR})")
 target_include_directories(${PROJECT_NAME}
     PUBLIC
     $<BUILD_INTERFACE:${json_INCLUDE_DIR}>
-    $<BUILD_INTERFACE:${spdlog_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${BoW_INCLUDE_DIR}>
     $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/src/>
     $<INSTALL_INTERFACE:include/PLPSLAM/3rd/json/include>
-    $<INSTALL_INTERFACE:include/PLPSLAM/3rd/spdlog/include>
     $<INSTALL_INTERFACE:${BoW_INCLUDE_DIR}>
     $<INSTALL_INTERFACE:include/>)
+
+if(NOT spdlog_FOUND)
+    target_include_directories(${PROJECT_NAME} PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/3rd/spdlog/include>)
+endif()
 
 # Link to required libraries
 target_link_libraries(${PROJECT_NAME}
@@ -159,6 +161,11 @@ target_link_libraries(${PROJECT_NAME}
     ${BoW_LIBRARY}
     PRIVATE
     ${LAPACK_LIBRARIES})
+
+if(spdlog_FOUND)
+    target_link_libraries(${PROJECT_NAME} PUBLIC spdlog::spdlog)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC SPDLOG_FMT_EXTERNAL)
+endif()
 
 # ----- Install configuration -----
 set(PLPSLAM_INCLUDE_INSTALL_DIR ${INCLUDES_DESTINATION}/PLPSLAM)

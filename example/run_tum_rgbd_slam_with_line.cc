@@ -29,6 +29,10 @@
 #include "socket_publisher/publisher.h"
 #endif
 
+#ifdef USE_ZMQ_LINE_PUBLISHER
+#include "PLPSLAM/publish/line_zmq_publisher.h"
+#endif
+
 #include "PLPSLAM/system.h"
 #include "PLPSLAM/config.h"
 
@@ -59,7 +63,9 @@ void mono_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
                    const bool no_sleep,
                    const bool auto_term,
                    const bool eval_log,
-                   const std::string &map_db_path)
+                   const std::string &map_db_path,
+                   const std::string &zmq_endpoint,
+                   const double zmq_interval_sec)
 {
     tum_rgbd_sequence sequence(sequence_dir_path);
     const auto frames = sequence.get_frames();
@@ -79,6 +85,11 @@ void mono_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
     pangolin_viewer::viewer viewer(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
 #elif USE_SOCKET_PUBLISHER
     socket_publisher::publisher publisher(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
+#endif
+
+#ifdef USE_ZMQ_LINE_PUBLISHER
+    PLPSLAM::publish::line_zmq_publisher zmq_pub(SLAM.get_map_publisher().get(), zmq_endpoint, zmq_interval_sec);
+    std::thread zmq_thread([&]() { zmq_pub.run(); });
 #endif
 
     std::vector<double> track_times;
@@ -154,6 +165,11 @@ void mono_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
 
     thread.join();
 
+#ifdef USE_ZMQ_LINE_PUBLISHER
+    zmq_pub.request_terminate();
+    zmq_thread.join();
+#endif
+
     // shutdown the SLAM process
     SLAM.shutdown();
 
@@ -193,7 +209,9 @@ void rgbd_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
                    const bool no_sleep,
                    const bool auto_term,
                    const bool eval_log,
-                   const std::string &map_db_path)
+                   const std::string &map_db_path,
+                   const std::string &zmq_endpoint,
+                   const double zmq_interval_sec)
 {
     tum_rgbd_sequence sequence(sequence_dir_path);
     const auto frames = sequence.get_frames();
@@ -212,6 +230,11 @@ void rgbd_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
     pangolin_viewer::viewer viewer(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
 #elif USE_SOCKET_PUBLISHER
     socket_publisher::publisher publisher(cfg, &SLAM, SLAM.get_frame_publisher(), SLAM.get_map_publisher());
+#endif
+
+#ifdef USE_ZMQ_LINE_PUBLISHER
+    PLPSLAM::publish::line_zmq_publisher zmq_pub(SLAM.get_map_publisher().get(), zmq_endpoint, zmq_interval_sec);
+    std::thread zmq_thread([&]() { zmq_pub.run(); });
 #endif
 
     std::vector<double> track_times;
@@ -288,6 +311,11 @@ void rgbd_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
 
     thread.join();
 
+#ifdef USE_ZMQ_LINE_PUBLISHER
+    zmq_pub.request_terminate();
+    zmq_thread.join();
+#endif
+
     // shutdown the SLAM process
     SLAM.shutdown();
 
@@ -339,6 +367,8 @@ int main(int argc, char *argv[])
     auto debug_mode = op.add<popl::Switch>("", "debug", "debug mode");
     auto eval_log = op.add<popl::Switch>("", "eval-log", "store trajectory and tracking times for evaluation");
     auto map_db_path = op.add<popl::Value<std::string>>("p", "map-db", "store a map database at this path after SLAM", "");
+    auto zmq_endpoint = op.add<popl::Value<std::string>>("", "zmq-endpoint", "ZMQ endpoint for line map publisher", "tcp://*:5557");
+    auto zmq_interval = op.add<popl::Value<double>>("", "zmq-interval", "publish interval in seconds for line map publisher", 5.0);
     try
     {
         op.parse(argc, argv);
@@ -397,13 +427,15 @@ int main(int argc, char *argv[])
     {
         mono_tracking(cfg, vocab_file_path->value(), data_dir_path->value(),
                       frame_skip->value(), no_sleep->is_set(), auto_term->is_set(),
-                      eval_log->is_set(), map_db_path->value());
+                      eval_log->is_set(), map_db_path->value(),
+                      zmq_endpoint->value(), zmq_interval->value());
     }
     else if (cfg->camera_->setup_type_ == PLPSLAM::camera::setup_type_t::RGBD)
     {
         rgbd_tracking(cfg, vocab_file_path->value(), data_dir_path->value(),
                       frame_skip->value(), no_sleep->is_set(), auto_term->is_set(),
-                      eval_log->is_set(), map_db_path->value());
+                      eval_log->is_set(), map_db_path->value(),
+                      zmq_endpoint->value(), zmq_interval->value());
     }
     else
     {

@@ -26,6 +26,7 @@
 #include "PLPSLAM/publish/frame_publisher.h"
 
 #include <spdlog/spdlog.h>
+#include <iomanip>
 #include <opencv2/imgproc.hpp>
 
 namespace PLPSLAM
