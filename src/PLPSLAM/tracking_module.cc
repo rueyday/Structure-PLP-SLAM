@@ -703,6 +703,10 @@ namespace PLPSLAM
     // FW:
     void tracking_module::apply_landmark_replace_line()
     {
+        if (last_frm_._landmarks_line.size() < last_frm_._num_keylines)
+        {
+            return;
+        }
         for (unsigned int idx = 0; idx < last_frm_._num_keylines; ++idx)
         {
             auto lm_line = last_frm_._landmarks_line.at(idx);

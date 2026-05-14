@@ -9,3 +9,6 @@ log.txt
 debug.txt
 *.msg
 .claude/
+*.txt
+*.db
+*.log

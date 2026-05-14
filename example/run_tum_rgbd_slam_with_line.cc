@@ -65,7 +65,8 @@ void mono_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
                    const bool eval_log,
                    const std::string &map_db_path,
                    const std::string &zmq_endpoint,
-                   const double zmq_interval_sec)
+                   const double zmq_interval_sec,
+                   const std::string &load_map_path)
 {
     tum_rgbd_sequence sequence(sequence_dir_path);
     const auto frames = sequence.get_frames();
@@ -76,8 +77,16 @@ void mono_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
     // - the 4th parameter: b_use_line_tracking = true
     PLPSLAM::system SLAM(cfg, vocab_file_path, false, true);
 
-    // startup the SLAM process
-    SLAM.startup();
+    // startup the SLAM process — load a pre-built map if provided
+    if (!load_map_path.empty())
+    {
+        SLAM.load_map_database(load_map_path);
+        SLAM.startup(false); // need_initialize=false: relocalize against loaded map
+    }
+    else
+    {
+        SLAM.startup();
+    }
 
     // create a viewer object
     // and pass the frame_publisher and the map_publisher
@@ -211,7 +220,8 @@ void rgbd_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
                    const bool eval_log,
                    const std::string &map_db_path,
                    const std::string &zmq_endpoint,
-                   const double zmq_interval_sec)
+                   const double zmq_interval_sec,
+                   const std::string &load_map_path)
 {
     tum_rgbd_sequence sequence(sequence_dir_path);
     const auto frames = sequence.get_frames();
@@ -221,8 +231,17 @@ void rgbd_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
     // - the 3rd parameter: b_seg_or_not = false,
     // - the 4th parameter: b_use_line_tracking = true
     PLPSLAM::system SLAM(cfg, vocab_file_path, false, true);
-    // startup the SLAM process
-    SLAM.startup();
+
+    // startup the SLAM process — load a pre-built map if provided
+    if (!load_map_path.empty())
+    {
+        SLAM.load_map_database(load_map_path);
+        SLAM.startup(false); // need_initialize=false: relocalize against loaded map
+    }
+    else
+    {
+        SLAM.startup();
+    }
 
     // create a viewer object
     // and pass the frame_publisher and the map_publisher
@@ -366,9 +385,10 @@ int main(int argc, char *argv[])
     auto auto_term = op.add<popl::Switch>("", "auto-term", "automatically terminate the viewer");
     auto debug_mode = op.add<popl::Switch>("", "debug", "debug mode");
     auto eval_log = op.add<popl::Switch>("", "eval-log", "store trajectory and tracking times for evaluation");
-    auto map_db_path = op.add<popl::Value<std::string>>("p", "map-db", "store a map database at this path after SLAM", "");
-    auto zmq_endpoint = op.add<popl::Value<std::string>>("", "zmq-endpoint", "ZMQ endpoint for line map publisher", "tcp://*:5557");
-    auto zmq_interval = op.add<popl::Value<double>>("", "zmq-interval", "publish interval in seconds for line map publisher", 5.0);
+    auto map_db_path   = op.add<popl::Value<std::string>>("p", "map-db",      "store a map database at this path after SLAM", "");
+    auto load_map_path = op.add<popl::Value<std::string>>("l", "load-map",    "load a pre-built map database and continue tracking", "");
+    auto zmq_endpoint  = op.add<popl::Value<std::string>>("",  "zmq-endpoint","ZMQ endpoint for line map publisher", "tcp://*:5557");
+    auto zmq_interval  = op.add<popl::Value<double>>     ("",  "zmq-interval","publish interval in seconds for line map publisher", 5.0);
     try
     {
         op.parse(argc, argv);
@@ -428,14 +448,14 @@ int main(int argc, char *argv[])
         mono_tracking(cfg, vocab_file_path->value(), data_dir_path->value(),
                       frame_skip->value(), no_sleep->is_set(), auto_term->is_set(),
                       eval_log->is_set(), map_db_path->value(),
-                      zmq_endpoint->value(), zmq_interval->value());
+                      zmq_endpoint->value(), zmq_interval->value(), load_map_path->value());
     }
     else if (cfg->camera_->setup_type_ == PLPSLAM::camera::setup_type_t::RGBD)
     {
         rgbd_tracking(cfg, vocab_file_path->value(), data_dir_path->value(),
                       frame_skip->value(), no_sleep->is_set(), auto_term->is_set(),
                       eval_log->is_set(), map_db_path->value(),
-                      zmq_endpoint->value(), zmq_interval->value());
+                      zmq_endpoint->value(), zmq_interval->value(), load_map_path->value());
     }
     else
     {

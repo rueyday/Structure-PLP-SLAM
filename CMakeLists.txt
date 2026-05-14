@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.8)
 project(PLPSLAM LANGUAGES CXX C)
 
+add_definitions(-include "${CMAKE_SOURCE_DIR}/gcc13_fix.h")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
