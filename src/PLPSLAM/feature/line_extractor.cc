@@ -133,7 +133,7 @@ namespace PLPSLAM
             // aggregate lines from original image resolution (octave == 0) saved as keylsd
             for (unsigned int i = 0; i < lsd.size(); i++)
             {
-                if (lsd[i].octave == 0 && lsd[i].lineLength >= 60)
+                if (lsd[i].octave == 0 && lsd[i].lineLength >= 45)
                 {
                     keylsd.push_back(lsd[i]);
                     keylbd_descr.push_back(lbd_descr.row(i));

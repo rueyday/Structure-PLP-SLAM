@@ -100,7 +100,7 @@ namespace PLPSLAM
             std::vector<float> _level_sigma_sq;
             std::vector<float> _inv_level_sigma_sq;
 
-            double _min_line_length = 0.125; // line segments shorter than that are rejected
+            double _min_line_length = 0.08; // line segments shorter than that are rejected
         };
 
     }

@@ -481,6 +481,12 @@ namespace PLPSLAM
     // FW:
     void mapping_module::triangulate_line_with_two_keyframes(data::keyframe *cur_keyfrm, data::keyframe *ngh_keyfrm)
     {
+        if (!cur_keyfrm || !ngh_keyfrm)
+            return;
+        if (!cur_keyfrm->camera_ || !ngh_keyfrm->camera_)
+            return;
+        if (cur_keyfrm->will_be_erased() || ngh_keyfrm->will_be_erased())
+            return;
         if (cur_keyfrm->_keylsd.size() == 0 || ngh_keyfrm->_keylsd.size() == 0)
         {
             return;
