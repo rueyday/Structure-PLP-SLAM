@@ -164,7 +164,15 @@ namespace PLPSLAM
                     }
 
                     const auto keyfrm_vtx = keyfrm_vtx_container.get_vertex(keyfrm);
+                    if (idx >= keyfrm->undist_keypts_.size() || idx >= keyfrm->stereo_x_right_.size())
+                    {
+                        continue;
+                    }
                     const auto &undist_keypt = keyfrm->undist_keypts_.at(idx);
+                    if (undist_keypt.octave >= static_cast<int>(keyfrm->inv_level_sigma_sq_.size()))
+                    {
+                        continue;
+                    }
                     const float x_right = keyfrm->stereo_x_right_.at(idx);
                     const float inv_sigma_sq = keyfrm->inv_level_sigma_sq_.at(undist_keypt.octave);
                     const auto sqrt_chi_sq = (keyfrm->camera_->setup_type_ == camera::setup_type_t::Monocular) ? sqrt_chi_sq_2D : sqrt_chi_sq_3D;
@@ -226,7 +234,15 @@ namespace PLPSLAM
                         }
 
                         const auto keyfrm_vtx = keyfrm_vtx_container.get_vertex(keyfrm);
+                        if (idx >= keyfrm->_keylsd.size())
+                        {
+                            continue;
+                        }
                         const auto &keyline = keyfrm->_keylsd.at(idx);
+                        if (keyline.octave >= static_cast<int>(keyfrm->_inv_level_sigma_sq_lsd.size()))
+                        {
+                            continue;
+                        }
                         const float inv_sigma_sq = keyfrm->_inv_level_sigma_sq_lsd.at(keyline.octave);
                         const auto sqrt_chi_sq = sqrt_chi_sq_2D;
 

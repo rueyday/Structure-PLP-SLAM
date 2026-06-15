@@ -1203,8 +1203,12 @@ namespace PLPSLAM
                     const auto &sp = keyline.getStartPoint();
                     const auto &ep = keyline.getEndPoint();
 
-                    const float depth_sp = right_img_depth.at<float>(sp.y, sp.x);
-                    const float depth_ep = right_img_depth.at<float>(ep.y, ep.x);
+                    const int sx = std::min(std::max((int)sp.x, 0), right_img_depth.cols - 1);
+                    const int sy = std::min(std::max((int)sp.y, 0), right_img_depth.rows - 1);
+                    const int ex = std::min(std::max((int)ep.x, 0), right_img_depth.cols - 1);
+                    const int ey = std::min(std::max((int)ep.y, 0), right_img_depth.rows - 1);
+                    const float depth_sp = right_img_depth.at<float>(sy, sx);
+                    const float depth_ep = right_img_depth.at<float>(ey, ex);
 
                     if (depth_sp < 0 || depth_ep < 0)
                     {

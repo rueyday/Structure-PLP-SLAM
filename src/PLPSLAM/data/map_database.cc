@@ -826,7 +826,6 @@ namespace PLPSLAM
                     continue;
                 }
 
-                lm_line->update_information();
                 assert(!landmarks_line.count(std::to_string(id)));
                 landmarks_line[std::to_string(id)] = lm_line->to_json();
             }

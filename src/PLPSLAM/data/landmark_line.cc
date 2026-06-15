@@ -323,6 +323,8 @@ namespace PLPSLAM
 
                 if (_will_be_erased)
                     return;
+                if (!_ref_keyfrm)
+                    return;
 
                 observations = _observations;
                 ref_kf = _ref_keyfrm;
@@ -456,7 +458,7 @@ namespace PLPSLAM
         {
             return {{"1st_keyfrm", _first_keyfrm_id},
                     {"pos_w", {_pos_w(0), _pos_w(1), _pos_w(2), _pos_w(3), _pos_w(4), _pos_w(5)}},
-                    {"ref_keyfrm", _ref_keyfrm->id_},
+                    {"ref_keyfrm", _ref_keyfrm ? _ref_keyfrm->id_ : _first_keyfrm_id},
                     {"n_vis", _num_observable},
                     {"n_fnd", _num_observed}};
         }
