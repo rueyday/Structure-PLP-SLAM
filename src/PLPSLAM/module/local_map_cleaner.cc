@@ -134,7 +134,7 @@ namespace PLPSLAM
         {
             constexpr float observed_ratio_thr = 0.3;
             constexpr unsigned int num_reliable_keyfrms = 2;
-            const unsigned int num_obs_thr = is_monocular_ ? 2 : 3;
+            const unsigned int num_obs_thr = is_monocular_ ? 1 : 3;
 
             // states of observed landmarks
             enum class lm_state_t

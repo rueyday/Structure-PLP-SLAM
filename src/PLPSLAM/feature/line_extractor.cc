@@ -370,7 +370,7 @@ namespace PLPSLAM
 
             // [3] keep octave-0 lines above length threshold
             // DeepLSD: 15px (NFA already filters noise); LSD fallback: 20px
-            const float min_len = used_deeplsd ? 15.0f : 20.0f;
+            const float min_len = used_deeplsd ? 15.0f : 15.0f;
             for (unsigned int i = 0; i < lsd.size(); i++)
             {
                 if (lsd[i].octave == 0 && lsd[i].lineLength >= min_len)

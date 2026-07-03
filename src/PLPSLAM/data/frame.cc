@@ -32,6 +32,8 @@
 #include "PLPSLAM/match/stereo.h"
 
 #include <thread>
+#include <algorithm>
+#include <cmath>
 
 #include <spdlog/spdlog.h>
 
@@ -1203,14 +1205,92 @@ namespace PLPSLAM
                     const auto &sp = keyline.getStartPoint();
                     const auto &ep = keyline.getEndPoint();
 
-                    const int sx = std::min(std::max((int)sp.x, 0), right_img_depth.cols - 1);
-                    const int sy = std::min(std::max((int)sp.y, 0), right_img_depth.rows - 1);
-                    const int ex = std::min(std::max((int)ep.x, 0), right_img_depth.cols - 1);
-                    const int ey = std::min(std::max((int)ep.y, 0), right_img_depth.rows - 1);
-                    const float depth_sp = right_img_depth.at<float>(sy, sx);
-                    const float depth_ep = right_img_depth.at<float>(ey, ex);
+                    // Robust endpoint depths: the projection of a 3D line has
+                    // inverse depth linear along the 2D segment, so sample the
+                    // whole segment and fit 1/z(t) = a + b*t with outlier
+                    // rejection instead of trusting the two endpoint pixels
+                    // (which sit on occlusion boundaries most often).
+                    float depth_sp = -1.f, depth_ep = -1.f;
+                    {
+                        const float dx = ep.x - sp.x, dy = ep.y - sp.y;
+                        const float seg_len = std::sqrt(dx * dx + dy * dy);
+                        const int n_samples = std::min(48, std::max(8, (int)(seg_len / 3.f)));
+                        std::vector<float> ts, invz;
+                        ts.reserve(n_samples);
+                        invz.reserve(n_samples);
+                        for (int i = 0; i < n_samples; ++i)
+                        {
+                            const float t = (float)i / (float)(n_samples - 1);
+                            const int px = std::min(std::max((int)(sp.x + t * dx), 0), right_img_depth.cols - 1);
+                            const int py = std::min(std::max((int)(sp.y + t * dy), 0), right_img_depth.rows - 1);
+                            const float d = right_img_depth.at<float>(py, px);
+                            if (d > 1e-3f)
+                            {
+                                ts.push_back(t);
+                                invz.push_back(1.f / d);
+                            }
+                        }
+                        if ((int)ts.size() >= 6 && ts.size() >= (size_t)(0.5 * n_samples))
+                        {
+                            std::vector<char> inl(ts.size(), 1);
+                            float a = 0.f, b = 0.f;
+                            for (int it = 0; it < 3; ++it)
+                            {
+                                // weighted LS fit of invz = a + b*t over inliers
+                                double sw = 0, st = 0, sz = 0, stt = 0, stz = 0;
+                                for (size_t i = 0; i < ts.size(); ++i)
+                                {
+                                    if (!inl[i])
+                                        continue;
+                                    sw += 1;
+                                    st += ts[i];
+                                    sz += invz[i];
+                                    stt += ts[i] * ts[i];
+                                    stz += ts[i] * invz[i];
+                                }
+                                const double det = sw * stt - st * st;
+                                if (sw < 6 || std::abs(det) < 1e-12)
+                                {
+                                    a = b = 0.f;
+                                    break;
+                                }
+                                a = (float)((stt * sz - st * stz) / det);
+                                b = (float)((sw * stz - st * sz) / det);
+                                // MAD-based rejection
+                                std::vector<float> res;
+                                res.reserve(ts.size());
+                                for (size_t i = 0; i < ts.size(); ++i)
+                                    res.push_back(std::abs(invz[i] - (a + b * ts[i])));
+                                std::vector<float> res_sorted(res);
+                                std::nth_element(res_sorted.begin(),
+                                                 res_sorted.begin() + res_sorted.size() / 2,
+                                                 res_sorted.end());
+                                const float mad = std::max(1e-4f, res_sorted[res_sorted.size() / 2]);
+                                for (size_t i = 0; i < ts.size(); ++i)
+                                    inl[i] = res[i] < 2.5f * mad;
+                            }
+                            const float invz_sp = a;
+                            const float invz_ep = a + b;
+                            if (invz_sp > 1e-4f && invz_ep > 1e-4f)
+                            {
+                                depth_sp = 1.f / invz_sp;
+                                depth_ep = 1.f / invz_ep;
+                            }
+                        }
+                    }
 
-                    if (depth_sp < 0 || depth_ep < 0)
+                    // Fallback: raw endpoint reads (previous behaviour)
+                    if (depth_sp <= 0 || depth_ep <= 0)
+                    {
+                        const int sx = std::min(std::max((int)sp.x, 0), right_img_depth.cols - 1);
+                        const int sy = std::min(std::max((int)sp.y, 0), right_img_depth.rows - 1);
+                        const int ex = std::min(std::max((int)ep.x, 0), right_img_depth.cols - 1);
+                        const int ey = std::min(std::max((int)ep.y, 0), right_img_depth.rows - 1);
+                        depth_sp = right_img_depth.at<float>(sy, sx);
+                        depth_ep = right_img_depth.at<float>(ey, ex);
+                    }
+
+                    if (depth_sp <= 0 || depth_ep <= 0)
                     {
                         continue;
                     }
