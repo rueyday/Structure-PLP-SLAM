@@ -297,7 +297,12 @@ namespace PLPSLAM
             }
 
             // FW: triangulate lines in monocular initialization
-            if (map_db_->_b_use_line_tracking)
+            // PLP_NO_INIT_LINES: skip init-time line triangulation — the
+            // barely-conditioned two-view init geometry (e.g. low-parallax
+            // forward motion on KITTI) can yield degenerate line landmarks
+            // that crash the init global BA; the mapping module triangulates
+            // lines continuously afterwards regardless.
+            if (map_db_->_b_use_line_tracking && !std::getenv("PLP_NO_INIT_LINES"))
             {
                 triangulate_line_with_two_keyframes(curr_keyfrm, init_keyfrm, curr_frm);
             }

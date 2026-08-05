@@ -27,6 +27,18 @@
 #include <sstream>
 #include <iomanip>
 #include <cassert>
+#include <stdexcept>
+
+#include <sys/stat.h>
+
+namespace
+{
+    bool dir_exists(const std::string &path)
+    {
+        struct stat info;
+        return stat(path.c_str(), &info) == 0 && S_ISDIR(info.st_mode);
+    }
+}
 
 kitti_sequence::kitti_sequence(const std::string &seq_dir_path)
 {
@@ -57,8 +69,41 @@ kitti_sequence::kitti_sequence(const std::string &seq_dir_path)
     ifs_timestamp.close();
 
     // load image file paths
-    const std::string left_img_dir_path = seq_dir_path + "/image_0/";
-    const std::string right_img_dir_path = seq_dir_path + "/image_1/";
+    // KITTI odometry ships two rectified, hardware-synchronised stereo pairs:
+    // image_0/image_1 (grayscale) and image_2/image_3 (colour). Prefer the
+    // grayscale pair, and fall back to the colour pair for downloads that only
+    // carry image_2/image_3. Both pairs share one timestamp per frame index,
+    // so pairing by index is the synchronisation.
+    std::string left_img_dir_path = seq_dir_path + "/image_0/";
+    std::string right_img_dir_path = seq_dir_path + "/image_1/";
+    if (!dir_exists(left_img_dir_path))
+    {
+        left_img_dir_path = seq_dir_path + "/image_2/";
+        right_img_dir_path = seq_dir_path + "/image_3/";
+        if (!dir_exists(left_img_dir_path))
+        {
+            throw std::runtime_error("Could not find image_0/ or image_2/ in " + seq_dir_path);
+        }
+    }
+
+    // KITTI_CAM=3 runs monocular off the right colour camera instead of the
+    // left. The two are interchangeable as mono input — same intrinsics, same
+    // rectification — so which one gives the better map is an empirical
+    // question per sequence, not a fixed choice.
+    const char *cam = std::getenv("KITTI_CAM");
+    if (cam && std::string(cam) == "3")
+    {
+        std::swap(left_img_dir_path, right_img_dir_path);
+    }
+
+    // KITTI_INTERLEAVE=1 feeds a single monocular stream that alternates
+    // between the two colour cameras: even frames from one, odd frames from
+    // the other. The camera therefore zig-zags 0.538 m sideways every frame,
+    // injecting the lateral parallax that pure forward motion never provides,
+    // while the tracker is still never told the baseline — so the map's scale
+    // stays as arbitrary as any monocular run.
+    const char *inter = std::getenv("KITTI_INTERLEAVE");
+    const bool interleave = inter && std::string(inter) == "1";
 
     left_img_file_paths_.clear();
     right_img_file_paths_.clear();
@@ -66,6 +111,13 @@ kitti_sequence::kitti_sequence(const std::string &seq_dir_path)
     {
         std::stringstream ss;
         ss << std::setfill('0') << std::setw(6) << i;
+        if (interleave)
+        {
+            const std::string &dir = (i % 2 == 0) ? left_img_dir_path : right_img_dir_path;
+            left_img_file_paths_.push_back(dir + ss.str() + ".png");
+            right_img_file_paths_.push_back(right_img_dir_path + ss.str() + ".png");
+            continue;
+        }
         left_img_file_paths_.push_back(left_img_dir_path + ss.str() + ".png");
         right_img_file_paths_.push_back(right_img_dir_path + ss.str() + ".png");
     }

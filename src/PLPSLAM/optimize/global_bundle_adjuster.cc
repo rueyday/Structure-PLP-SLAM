@@ -35,6 +35,7 @@
 #include <g2o/core/sparse_optimizer.h>
 #include <g2o/core/robust_kernel_impl.h>
 #include <g2o/types/sba/types_six_dof_expmap.h>
+#include <cstdlib>
 #include <g2o/solvers/eigen/linear_solver_eigen.h>
 #include <g2o/solvers/csparse/linear_solver_csparse.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
@@ -73,6 +74,13 @@ namespace PLPSLAM
             // FW:
             auto lms_line = map_db_->get_all_landmarks_line();
             std::vector<bool> is_optimized_lm_line(lms_line.size(), true);
+
+            // PLP_NO_INIT_LINES: decide once whether line landmarks take part in
+            // this BA. Both the vertex-building pass and the write-back pass must
+            // read the same flag — gating only the build pass leaves the write-back
+            // calling get_vertex() on an empty container (std::out_of_range).
+            const bool optimize_lines = map_db_->_b_use_line_tracking && !lms_line.empty()
+                                        && !std::getenv("PLP_NO_INIT_LINES");
 
             // [2] build optimizer
 
@@ -195,7 +203,11 @@ namespace PLPSLAM
             g2o::landmark_vertex_container_line3d line3d_vtx_contrainer(lm_vtx_container.get_max_vertex_id() + 1, lms_line.size());
             std::vector<reproj_edge_wrapper> reproj_edge_wraps_for_line3d;
             reproj_edge_wraps_for_line3d.reserve(10 * lms_line.size());
-            if (map_db_->_b_use_line_tracking && !lms_line.empty())
+            // PLP_NO_INIT_LINES: exclude line landmarks from global BA — the
+            // monocular-init BA races with the mapping thread's concurrent
+            // line triangulation (crash on KITTI); lines are still created,
+            // locally optimized, and loop-corrected elsewhere.
+            if (optimize_lines)
             {
                 for (unsigned int i = 0; i < lms_line.size(); ++i)
                 {
@@ -326,8 +338,8 @@ namespace PLPSLAM
                 }
             }
 
-            // FW:
-            if (map_db_->_b_use_line_tracking && !lms_line.empty())
+            // FW: write back only what was actually added as a vertex above
+            if (optimize_lines)
             {
                 for (unsigned int i = 0; i < lms_line.size(); ++i)
                 {
