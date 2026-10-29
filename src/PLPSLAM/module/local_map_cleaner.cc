@@ -21,6 +21,8 @@
  * along with Structure PLP-SLAM. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstdlib>
+#include <string>
 #include "PLPSLAM/data/keyframe.h"
 #include "PLPSLAM/data/landmark.h"
 #include "PLPSLAM/data/landmark_line.h"
@@ -315,6 +317,33 @@ namespace PLPSLAM
                 if (obs_by_keyfrm_is_redundant)
                 {
                     ++num_redundant_obs;
+                }
+            }
+
+            // SPLP_LINEFIX: keyframe culling used to count POINT observations only,
+            // so a keyframe carrying unique LINE observations could be erased at
+            // 90% point redundancy and those line observations vanished with it.
+            // Lines have a single pyramid level, so "better observation" reduces
+            // to "observed by >= num_better_obs_thr other keyframes".
+            static const bool linefix_cull = []() { const char *e = std::getenv("SPLP_LINEFIX"); return e && (std::string(e) == "1" || std::string(e).find("cull") != std::string::npos); }();  // SPLP_LINEFIX=1 | comma list of cap,obs,cull
+            if (linefix_cull)
+            {
+                const auto lines = keyfrm->get_landmarks_line();
+                for (const auto lm : lines)
+                {
+                    if (!lm || lm->will_be_erased())
+                    {
+                        continue;
+                    }
+                    ++num_valid_obs;
+                    if (lm->num_observations() <= num_better_obs_thr)
+                    {
+                        continue;
+                    }
+                    if (lm->num_observations() - 1 >= num_better_obs_thr)
+                    {
+                        ++num_redundant_obs;
+                    }
                 }
             }
         }

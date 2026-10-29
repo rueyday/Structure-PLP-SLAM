@@ -21,6 +21,8 @@
  * along with Structure PLP-SLAM. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstdlib>
+#include <string>
 #include "PLPSLAM/camera/perspective.h"
 #include "PLPSLAM/data/keyframe.h"
 #include "PLPSLAM/module/two_view_triangulator_line.h"
@@ -250,7 +252,10 @@ namespace PLPSLAM
             }
 
             // check if the 3D line is too lang
-            if ((ep_3D.block<3, 1>(0, 0) - sp_3D.block<3, 1>(0, 0)).norm() / keyfrm_2_->compute_median_depth(true) > 0.9)
+            // SPLP_LINEFIX: 0.9 x median depth deletes room and corridor edges,
+            // the longest and best-observed structure; relax to 3.0 under the flag.
+            static const bool linefix_len = []() { const char *e = std::getenv("SPLP_LINEFIX"); return e && (std::string(e) == "1" || std::string(e).find("cap") != std::string::npos); }();  // SPLP_LINEFIX=1 | comma list of cap,obs,cull
+            if ((ep_3D.block<3, 1>(0, 0) - sp_3D.block<3, 1>(0, 0)).norm() / keyfrm_2_->compute_median_depth(true) > (linefix_len ? 3.0 : 0.9))
             {
                 return false;
             }

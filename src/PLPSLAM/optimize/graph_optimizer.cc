@@ -84,7 +84,7 @@ namespace PLPSLAM
 
             for (auto keyfrm : all_keyfrms)
             {
-                if (keyfrm->will_be_erased())
+                if (!keyfrm || keyfrm->will_be_erased())
                 {
                     continue;
                 }
@@ -266,7 +266,7 @@ namespace PLPSLAM
                         continue;
                     }
 
-                    if (connected_keyfrm->will_be_erased())
+                    if (!connected_keyfrm || connected_keyfrm->will_be_erased())
                     {
                         continue;
                     }
@@ -330,7 +330,7 @@ namespace PLPSLAM
                 // Correct position of point cloud
                 for (auto lm : all_lms)
                 {
-                    if (lm->will_be_erased())
+                    if (!lm || lm->will_be_erased())
                     {
                         continue;
                     }
@@ -354,7 +354,7 @@ namespace PLPSLAM
                 {
                     for (auto lm_line : all_lms_line)
                     {
-                        if (lm_line->will_be_erased())
+                        if (!lm_line || lm_line->will_be_erased())
                         {
                             continue;
                         }

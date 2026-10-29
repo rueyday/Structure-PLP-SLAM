@@ -97,8 +97,19 @@ void mono_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
 #endif
 
 #ifdef USE_ZMQ_LINE_PUBLISHER
-    PLPSLAM::publish::line_zmq_publisher zmq_pub(SLAM.get_map_publisher().get(), zmq_endpoint, zmq_interval_sec);
-    std::thread zmq_thread([&]() { zmq_pub.run(); });
+    // OPT-IN. The publisher walks the live map from its own thread with no lock
+    // on the mapping module, so during batch map-building it reads half-written
+    // cv::Mat descriptors and corrupts the heap ("corrupted double-linked list"
+    // -> abort inside assign_keypoints_to_grid). An empty --zmq-endpoint leaves
+    // the thread unstarted; pass an endpoint only for live viewing.
+    std::unique_ptr<PLPSLAM::publish::line_zmq_publisher> zmq_pub;
+    std::thread zmq_thread;
+    if (!zmq_endpoint.empty())
+    {
+        zmq_pub.reset(new PLPSLAM::publish::line_zmq_publisher(
+            SLAM.get_map_publisher().get(), zmq_endpoint, zmq_interval_sec));
+        zmq_thread = std::thread([&]() { zmq_pub->run(); });
+    }
 #endif
 
     std::vector<double> track_times;
@@ -175,8 +186,11 @@ void mono_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
     thread.join();
 
 #ifdef USE_ZMQ_LINE_PUBLISHER
-    zmq_pub.request_terminate();
-    zmq_thread.join();
+    if (zmq_pub)
+    {
+        zmq_pub->request_terminate();
+        zmq_thread.join();
+    }
 #endif
 
     // shutdown the SLAM process
@@ -252,8 +266,19 @@ void rgbd_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
 #endif
 
 #ifdef USE_ZMQ_LINE_PUBLISHER
-    PLPSLAM::publish::line_zmq_publisher zmq_pub(SLAM.get_map_publisher().get(), zmq_endpoint, zmq_interval_sec);
-    std::thread zmq_thread([&]() { zmq_pub.run(); });
+    // OPT-IN. The publisher walks the live map from its own thread with no lock
+    // on the mapping module, so during batch map-building it reads half-written
+    // cv::Mat descriptors and corrupts the heap ("corrupted double-linked list"
+    // -> abort inside assign_keypoints_to_grid). An empty --zmq-endpoint leaves
+    // the thread unstarted; pass an endpoint only for live viewing.
+    std::unique_ptr<PLPSLAM::publish::line_zmq_publisher> zmq_pub;
+    std::thread zmq_thread;
+    if (!zmq_endpoint.empty())
+    {
+        zmq_pub.reset(new PLPSLAM::publish::line_zmq_publisher(
+            SLAM.get_map_publisher().get(), zmq_endpoint, zmq_interval_sec));
+        zmq_thread = std::thread([&]() { zmq_pub->run(); });
+    }
 #endif
 
     std::vector<double> track_times;
@@ -331,8 +356,11 @@ void rgbd_tracking(const std::shared_ptr<PLPSLAM::config> &cfg,
     thread.join();
 
 #ifdef USE_ZMQ_LINE_PUBLISHER
-    zmq_pub.request_terminate();
-    zmq_thread.join();
+    if (zmq_pub)
+    {
+        zmq_pub->request_terminate();
+        zmq_thread.join();
+    }
 #endif
 
     // shutdown the SLAM process
@@ -387,7 +415,7 @@ int main(int argc, char *argv[])
     auto eval_log = op.add<popl::Switch>("", "eval-log", "store trajectory and tracking times for evaluation");
     auto map_db_path   = op.add<popl::Value<std::string>>("p", "map-db",      "store a map database at this path after SLAM", "");
     auto load_map_path = op.add<popl::Value<std::string>>("l", "load-map",    "load a pre-built map database and continue tracking", "");
-    auto zmq_endpoint  = op.add<popl::Value<std::string>>("",  "zmq-endpoint","ZMQ endpoint for line map publisher", "tcp://*:5557");
+    auto zmq_endpoint  = op.add<popl::Value<std::string>>("",  "zmq-endpoint","ZMQ endpoint for line map publisher (empty = publisher OFF)", "");
     auto zmq_interval  = op.add<popl::Value<double>>     ("",  "zmq-interval","publish interval in seconds for line map publisher", 5.0);
     try
     {

@@ -184,12 +184,12 @@ namespace PLPSLAM
                         second_best_hamm_dist = best_hamm_dist;
                         best_hamm_dist = dist;
                         second_best_scale_level = best_scale_level;
-                        best_scale_level = frm.undist_keypts_.at(idx).octave;
+                        best_scale_level = frm._keylsd.at(idx).octave;
                         best_idx = idx;
                     }
                     else if (dist < second_best_hamm_dist)
                     {
-                        second_best_scale_level = frm.undist_keypts_.at(idx).octave;
+                        second_best_scale_level = frm._keylsd.at(idx).octave;
                         second_best_hamm_dist = dist;
                     }
                 }

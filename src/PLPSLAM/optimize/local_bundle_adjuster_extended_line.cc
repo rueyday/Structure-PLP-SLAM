@@ -89,7 +89,7 @@ namespace PLPSLAM
 
                     continue;
                 }
-                if (local_keyfrm->will_be_erased())
+                if (!local_keyfrm || local_keyfrm->will_be_erased())
                 {
                     continue;
                 }
@@ -115,7 +115,7 @@ namespace PLPSLAM
                     {
                         continue;
                     }
-                    if (local_lm->will_be_erased())
+                    if (!local_lm || local_lm->will_be_erased())
                     {
                         continue;
                     }
@@ -138,7 +138,7 @@ namespace PLPSLAM
                     {
                         continue;
                     }
-                    if (local_lm_line->will_be_erased())
+                    if (!local_lm_line || local_lm_line->will_be_erased())
                     {
                         continue;
                     }
@@ -169,7 +169,7 @@ namespace PLPSLAM
                     {
                         continue;
                     }
-                    if (fixed_keyfrm->will_be_erased())
+                    if (!fixed_keyfrm || fixed_keyfrm->will_be_erased())
                     {
                         continue;
                     }
@@ -202,7 +202,7 @@ namespace PLPSLAM
                     {
                         continue;
                     }
-                    if (fixed_keyfrm->will_be_erased())
+                    if (!fixed_keyfrm || fixed_keyfrm->will_be_erased())
                     {
                         continue;
                     }
@@ -327,7 +327,7 @@ namespace PLPSLAM
                     {
                         continue;
                     }
-                    if (keyfrm->will_be_erased())
+                    if (!keyfrm || keyfrm->will_be_erased())
                     {
                         continue;
                     }
@@ -392,7 +392,7 @@ namespace PLPSLAM
                         {
                             continue;
                         }
-                        if (keyfrm->will_be_erased())
+                        if (!keyfrm || keyfrm->will_be_erased())
                         {
                             continue;
                         }
@@ -460,7 +460,7 @@ namespace PLPSLAM
                     auto edge = reproj_edge_wrap.edge_;
 
                     auto local_lm = reproj_edge_wrap.lm_;
-                    if (local_lm->will_be_erased())
+                    if (!local_lm || local_lm->will_be_erased())
                     {
                         continue;
                     }
@@ -490,7 +490,7 @@ namespace PLPSLAM
                     {
                         auto edge = line_reproj_edge.edge_;
                         auto local_lm_line = line_reproj_edge._lm_line;
-                        if (local_lm_line->will_be_erased())
+                        if (!local_lm_line || local_lm_line->will_be_erased())
                         {
                             continue;
                         }
@@ -531,7 +531,7 @@ namespace PLPSLAM
                 auto edge = reproj_edge_wrap.edge_;
 
                 auto local_lm = reproj_edge_wrap.lm_;
-                if (local_lm->will_be_erased())
+                if (!local_lm || local_lm->will_be_erased())
                 {
                     continue;
                 }
@@ -560,7 +560,7 @@ namespace PLPSLAM
                     auto edge = line_reproj_edge.edge_;
 
                     auto local_lm_line = line_reproj_edge._lm_line;
-                    if (local_lm_line->will_be_erased())
+                    if (!local_lm_line || local_lm_line->will_be_erased())
                     {
                         continue;
                     }

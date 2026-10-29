@@ -128,7 +128,7 @@ namespace PLPSLAM
                 {
                     continue;
                 }
-                if (lm->will_be_erased())
+                if (!lm || lm->will_be_erased())
                 {
                     continue;
                 }

@@ -21,6 +21,8 @@
  * along with Structure PLP-SLAM. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <cstdlib>
+#include <string>
 #include "PLPSLAM/data/landmark_line.h"
 
 #include "PLPSLAM/data/frame.h"
@@ -147,7 +149,18 @@ namespace PLPSLAM
                     // int idx = _observations.at(keyfrm);
 
                     // monocular/RGB-D, not for stereo settings for now
-                    _num_observable -= 1;
+                    // SPLP_LINEFIX: add_observation increments _num_observations, so
+                    // erasing must decrement the SAME counter (the original touched
+                    // _num_observable, which drifts observed_ratio upward).
+                    static const bool linefix_obs = []() { const char *e = std::getenv("SPLP_LINEFIX"); return e && (std::string(e) == "1" || std::string(e).find("obs") != std::string::npos); }();  // SPLP_LINEFIX=1 | comma list of cap,obs,cull
+                    if (linefix_obs)
+                    {
+                        _num_observations -= 1;
+                    }
+                    else
+                    {
+                        _num_observable -= 1;
+                    }
 
                     _observations.erase(keyfrm);
 

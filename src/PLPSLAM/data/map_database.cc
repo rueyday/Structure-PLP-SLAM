@@ -167,6 +167,22 @@ namespace PLPSLAM
                 _landmarks_plane.clear();
             }
 
+            // FW/SCALAR: line landmarks were NEVER cleared here. Every tracking
+            // reset deleted the keyframes but left the previous map's Line objects
+            // alive in _landmarks_line, each still holding observations that point
+            // at the freed keyframes. The next monocular initialization runs a
+            // global BA over get_all_landmarks_line() and dereferences one --
+            // SIGSEGV at global_bundle_adjuster.cc:254 (or a garbage-sized vector
+            // -> std::out_of_range). That is why the crashes only ever happened
+            // after "tracking lost ... resetting system".
+            for (auto &lm_line : _landmarks_line)
+            {
+                delete lm_line.second;
+                lm_line.second = nullptr;
+            }
+            _landmarks_line.clear();
+            _local_landmarks_line.clear();
+
             landmarks_.clear();
             keyframes_.clear();
             max_keyfrm_id_ = 0;
